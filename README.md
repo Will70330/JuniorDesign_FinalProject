@@ -1,5 +1,29 @@
 # JuniorDesign_FinalProject
 
+## Using Fusion 360 for the Design
+
+### The Base
+
+The base of the design is meant to house a Raspberry Pi alongside the actual servo that will be rotating the head. The Raspberry Pi sits within the enclosure with added holes for both ventilation and various I/O Ports (ie. HDMI, USB, power, etc) as can be seen in the images below.
+
+![Base Top View](./examples/Base_TopView.jpg)
+![Base Angled View](./examples/Base_AngleView.jpg)
+![Lid Angled View](./examples/Lid_AngleView.jpg)
+
+This is what essentially acts as our base for the head to rest on while sitting atop someone's desk.
+
+### The Head
+
+The head has been designed to fit up to a RealSense d455 Depth Camera sensor. There is an extruded platform on which the sensor rests, with enough space to be able to actually plug in the camera from below still. Additionally, there is a hole exiting the back of the head for which the connecting cables can exit and plug into the Raspberry Pi housed in the base.
+
+Additional holes are placed in the front fascia where there is supposed to be an integrated speaker, but for now, the speaker was not added, so it serves to act as some additonal ventilation for the camera sensor.
+
+Unfortunately, my CADing skills are still very poor, so the design of the head itself is very limited. However, it did result in a very cool Iron Man Prototype-esque appearance that looks awesome to some, and probably terrifying to most.
+
+![Outside of Frontal Head Piece](./examples/Head_Front_Outside.jpg)
+![Inside of Frontal Head Piece](./examples/Head_Front_Inside.jpg)
+![Inside of Back Head Piece](./examples/Head_Back_Inside.jpg)
+
 ## Using OpenCV for Facial Detection
 
 ### [Haar Cascades](https://docs.opencv.org/3.4/db/d28/tutorial_cascade_classifier.html)
