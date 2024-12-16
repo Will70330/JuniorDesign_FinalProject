@@ -4,19 +4,18 @@ import os
 import pyrealsense2 as rs
 import urllib.request
 
-# from .....opencv_zoo.models.face_detection_yunet.yunet import YuNet
-
-
-def detectAndDisplay(frame):
-    # frame_gray = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
-    # frame_gray = cv2.equalizeHist(frame_gray)
+def detectAndDisplay(frame, use_YN):
+    frame_gray = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
+    frame_gray = cv2.equalizeHist(frame_gray)
 
     # Detect Faces
-    # faces = face_cascade.detectMultiScale(frame_gray) # Using HaarCascades
-    _, faces = face_YN_detector.detect(frame)
+    if not use_YN:
+        faces = face_cascade.detectMultiScale(frame_gray) # Using HaarCascades
+    else:
+        _, faces = face_YN_detector.detect(frame) # Using YuNet Model
     
     # Only modify frames if faces are detected
-    if not faces is None and faces.shape[0] >= 1:
+    if (not use_YN) or (not faces is None and faces.shape[0] >= 1):
         for face in faces:
             x, y, w, h = face[:4].astype(int)
             frame = cv2.rectangle(frame, (x,y), (x+w, y+h), color=(0,0,255), thickness=2)
@@ -24,8 +23,11 @@ def detectAndDisplay(frame):
     cv2.imshow("Facial Detection Test", frame)
 
 # Facial Classifiers
-# face_cascade_name = cv2.data.haarcascades + 'haarcascade_frontalface_default.xml'
-# face_cascade = cv2.CascadeClassifier()
+# -- Haar Cascades
+face_cascade_name = cv2.data.haarcascades + 'haarcascade_frontalface_default.xml'
+face_cascade = cv2.CascadeClassifier()
+
+# -- YuNet
 try:
     current_dir = os.getcwd()
     model_name = "face_detection_yunet_2023mar.onnx"
@@ -57,17 +59,13 @@ try:
 except Exception as e:
     print(f"Could not load YN face detector: {e}")
 finally:
-    print("Face Detector Model Created.")
-
-
+    print("YuNet Face Detector Model Created.")
 
 # Load the Facial Detector
-# if not face_cascade.load(cv2.samples.findFile(face_cascade_name)):
-#     print("Error Loading Face Cascade")
-
+if not face_cascade.load(cv2.samples.findFile(face_cascade_name)):
+    print("Error Loading Face Cascade")
 
 # Configure Streams from realsense
-# Config depth and color streams
 pipeline = rs.pipeline()
 config = rs.config()
 
@@ -105,7 +103,7 @@ try:
 
         # Run facial detection
         cv2.namedWindow("Facial Detection Test", cv2.WINDOW_AUTOSIZE)
-        detectAndDisplay(color_image)
+        detectAndDisplay(color_image, True)
         key = cv2.waitKey(1)
     
 finally:
