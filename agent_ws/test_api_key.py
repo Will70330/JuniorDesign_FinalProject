@@ -35,6 +35,8 @@ if __name__ == "__main__":
         candidate_count=1,
         temperature=1.0
     )
-    model = genai.GenerativeModel("models/gemini-1.5-flash", safety_settings=None)
-    response = model.generate_content("Tell me a couple jokes each in one sentence.", generation_config=generation_conf, stream=False)
-    print(response.text)
+    model = genai.GenerativeModel("models/gemini-1.5-flash", safety_settings=None, generation_config=generation_conf)
+    chat = model.start_chat(history=[])
+    response = chat.send_message("Hello how are you today?")
+    response = chat.send_message("What's your name?")
+    print(chat.history)

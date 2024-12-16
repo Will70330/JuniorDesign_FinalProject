@@ -36,9 +36,86 @@ Luckily, OpenCV also has a pretrained YuNet model readily available for use, res
 
 ![YuNet Facial Detection Model](./examples/FacialDetection_YuNet.gif)
 
-## Using Gemini for Facial Recognition and Temporal Tracking
+## Using [Gemini](https://ai.google.dev/gemini-api/docs/quickstart?_gl=1*17d54za*_up*MQ..&gclid=CjwKCAiAmfq6BhAsEiwAX1jsZ0pijycy7uQXAYtBiWm_CS0-SJHGn6CynoKkWXzQRwCfrn1JO_HbJRoCefsQAvD_BwE&lang=python) for Facial Recognition and Temporal Tracking
 
-FILL IN.
+In the competitive space of AI and Large Language Models (LLMs), there are many different competitors fighting for marketshare. Some of the biggest names in the space at this moment are OpenAI's ChatGPT, Anthropic's Claude, Meta's Llama, and Google's Gemini. Of these models, I've elected to utilize Google's Gemini API with both the Flash (free and light weight) and Pro (paid, larger, more advanced) models from their Gemini 1.5 lineup. One of the primary benefits of Gemini is it's 2M token context window that allows for long-context conversational chats, something that this application should benefit from. As an AI desk assistant, we don't need to remember ALL of the chat history, but if we are tokenizing image frames for input into the model, we will want to keep track of users and the context of their surroundings and interactions. Long-Context should enable us to have longer chat sessions without losing memory because each image is scaled to fit within Gemini's resolution limits (minimum of 768 pixels, maximum of 3072) and capped at 258 tokens.
+
+The Gemini API is very well documented and their flash and pro models are some of the only models to offer multi-modal capabilities that span a significant number of modalities (ie. text, images, videos, audio). My time at Google allowed me to learn more about the API and its limitations and use cases. By using the Gemini API, I don't need to worry about quanitizing any largescale models to fit within limited computational resources. By calling the API directly, I can leverage Google's datacenters and compute in order to process queries and produce tokens faster than I could locally on a laptop or raspberry pi.
+
+However, there are still downsides to this approach. The first being data security, with this solution, image frames and query data are all likely shared with Google as we are using their APIs. Additionally, there is significantly more latency as we have to send the query to their servers and then wait for the tokens to be produced and sent back to our laptop, therefore this prevents our system from running at ultra low latency and polling frames quickly because of the network overhead. Although, this is still significantly faster than running any larger models locally as output tokens would not be produced nearly as quickly.
+
+So we've discussed using Cascades and YuNet for Facial Detection, but what about actually identifying the person in frame? For that, we need some way to preserve termporal context if we aren't going to use tracking. We can accomplish this with Gemini through custom structure response outputs and preemptively loading the model with identities. For example, if I provide the model with the following images.
+
+![Temporal Test Image 1](./examples/temporal_test1.png) ![Temporal Test Image 1](./examples/temporal_test2.png)
+
+I can tell the model that this is Will. Theoretically, it should then be capable of detecting and knowing Will better as the conversation continues. Furthermore, this can extend to objects as well, where we can prompt Gemini about objects that are also within the frame.
+
+For our given test case, we specify a structured type "Entity" as defined below.
+
+```python
+class Entity(typing.TypedDict):
+    entity_name: str
+    entity_type: str
+    entity_location: list[int]
+```
+
+We can then specify the return type for the model with a configuration as such:
+
+```python
+# Set up Model API
+genai.configure(api_key=gemini_api_key)
+conf = genai.types.GenerationConfig(
+    temperature=1.0,
+    response_mime_type="application/json",
+    response_schema=list[Entity]   
+)
+identifier_model = genai.GenerativeModel("models/gemini-1.5-flash", generation_config=conf)
+```
+
+Below is an example chat with Gemini providing the last 2 images as inputs with the following prompts. We first start with an initial prompt to tell Gemini the behavior we want for this particular "agent".
+
+```python
+# Start Interaction
+chat = identifier_model.start_chat(history=[])
+chat.send_message("""
+    You are an identifier, your job is to identify people and objects within images.
+    Provide answers that are concise and accurate, and do not hallucinate or make up any answers.
+    
+    For the entity name:
+        if the entity is a person, fill with some random identifier ID unless provided with a specific name.
+        if the entity is an object, fill with the name of the object (ie phone, pen, apple, etc).
+                    Try to be specific as possible when identifying objects (iPhone vs. Phone, Red Shirt vs Shirt, Black Marker vs Pen)     
+    For the entity location, use a list in [ymin, xmin, ymax, xmax] format.
+    For the entity type, use 'person' for people, and 'item' for objects.
+                    
+    List all relevant entities (people and objects) within the frame that are relevant to the query.
+""")
+```
+
+Here is the following chat after the agent has been primed:
+
+```
+________________________________________________________________________________
+Prompt: input_image1 + input_image2 + "The person in this image is William."
+Model Response:
+ [{"entity_location": [186,486,500,637], "entity_name": "William", "entity_type": "person"}, {"entity_location": [0,0,0,0], "entity_name": "Over-ear Headphones", "entity_type": "item"}, {"entity_location": [0,0,0,0], "entity_name": "Red Nike T-Shirt", "entity_type": "item"}, {"entity_location": [0,0,0,0], "entity_name": "Eyeglasses", "entity_type": "item"}]
+________________________________________________________________________________
+Prompt: input_image3 + "Who is holding the phone?"
+Model Response:
+ [{"entity_location": [166,406,603,682], "entity_name": "William", "entity_type": "person"}, {"entity_location": [327,678,625,851], "entity_name": "iPhone 12 with MagSafe Case", "entity_type": "item"}]
+________________________________________________________________________________
+Prompt: "What type of phone is he holding"
+Model Response:
+ [{"entity_location": [327,678,625,851], "entity_name": "iPhone 12 with MagSafe Case", "entity_type": "item"}]
+```
+
+We can see with just the first prompt, the model was able to detect various objects that were on or around William (me) such as "Over-ear headphones", "Red Nike T-Shirt", and "Glasses".
+
+By telling Gemini that we also want a bounding box for the answer of each entity, we can then perform a simple calculation to actually convert this bounding box to the coordinate frame of our original image. First we just divide each coordinate by 1000, and then we multiply the x coordinates by the width of the original image and we multiple the y coordinates by the height of the original image. Using these coordinates for the bounding box, we can draw a rectangle representing where Gemini thinks the object is as well as labeling it with the name Gemini thinks it is as seen below:
+
+![Gemini Bounding Box Output](./examples/ObjectDetection_Gemini.jpg)
+
+The detection and predictions are not perfect or consistent, but can likely be dialed in with tuning the temperature value for the model responses, but this is out of scope for the timeframe of this project.
 
 ## References
 - https://www.intelrealsense.com/sdk-2/
@@ -49,4 +126,6 @@ FILL IN.
 - https://ai.google.dev/gemini-api/docs?gad_source=1&gclid=CjwKCAiAmfq6BhAsEiwAX1jsZ0pijycy7uQXAYtBiWm_CS0-SJHGn6CynoKkWXzQRwCfrn1JO_HbJRoCefsQAvD_BwE
 - https://link.springer.com/article/10.1007/s11633-023-1423-y
 - https://www.cs.cmu.edu/~efros/courses/LBMV07/Papers/viola-cvpr-01.pdf
+- https://www.kaggle.com/code/junhyeonkwon/using-yunet
+- https://discuss.ai.google.dev/t/how-to-make-a-conversation-with-gemini-that-supports-pictures/52472
 - 
