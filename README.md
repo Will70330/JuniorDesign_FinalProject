@@ -24,6 +24,13 @@ Unfortunately, my CADing skills are still very poor, so the design of the head i
 ![Inside of Frontal Head Piece](./examples/Head_Front_Inside.jpg)
 ![Inside of Back Head Piece](./examples/Head_Back_Inside.jpg)
 
+### Issues with Printing
+
+There were multiple issues experienced while 3D Printing the design. By far the worst issue was misalignment on key dimension measurements resulting in prints that were completely unusuable, wasting filament, time, and energy. The Initial Front Head piece actually could not fit the RealSense camera sensor. I attempted to file down the platform, but there was too much material to remove. Additionally, with how the STL file was oriented prior to print, there was a severe layer-shift that warped the print and weakened the base on which the camera was supposed to rest on. This was fixed in the following iteration, although there were still some minor adjustments needed post-printing due to the dimensions being off by a few millimeters.
+
+![New Version of Frontal Head Piece](./examples/Head_Front_Inside2.jpg)
+![Printing Original Front Head Piece](./examples/front_head_print.gif)
+
 ## Using OpenCV for Facial Detection
 
 ### [Haar Cascades](https://docs.opencv.org/3.4/db/d28/tutorial_cascade_classifier.html)
@@ -204,11 +211,32 @@ The Diagram demonstrates our final set of Agents. their responsibilities, and ho
 
 We start with our scene or environment that consists of the user (and any other companions) and other various objects that may be in the scene. When the user prompts the system with their voice, it triggers the Cameras to also capture the current scene.
 
-The audio is then passed into our Speech-to-Text Agent that is powered by Gemini while the the Images are passed into our Identifier / Classifier Agent that is also powered by Gemini. Together, they append their outputs to the list of prompts that will be used by our actual Chat Assistant Agent. This agent takes our transcribed prompt, detected entities, and input images to then answer the prompt provided by the user with the added context of the scene.
+The audio is then passed into our Speech-to-Text Agent that is powered by Gemini while the Images are passed into our Identifier / Classifier Agent that is also powered by Gemini. Together, they append their outputs to the list of prompts that will be used by our actual Chat Assistant Agent. This agent takes our transcribed prompt, detected entities, and input images to then answer the prompt provided by the user with the added context of the scene.
 
 The output of our Assistant Agent is then passed into our Chat Voice Agent that performs Text-to-Speech using OpenAI's models and the 'onyx' voice. This is the final output heard by the user.
 
-In addition to the audio output, the BBOX detections from the Object Classifier are then passed into another Agent that identifies the relevant entity to focus on and translates the bounding box coordinates to commands for the servo to follow to focus on the user.
+### Servo Controls
+
+In the future, in addition to the audio output, the BBOX detections from the Object Classifier can then be passed into another Agent that identifies the relevant entity to focus on and translates the bounding box coordinates to commands for the servo to follow to focus on the user. Instead, for now, we use YuNet's Facial Detection model to generate the bounding box that is used to calculate the error from the center of the image and commands the servo to correct for this error as seen below.
+
+```python
+def calculate_servo_angle(self, bbox_center_x, image_center_x):
+    error = bbox_center_x - image_center_x
+    adjustment = 0.01 * error
+    new_angle = self.current_angle - adjustment
+    self.current_angle = max(0, min(180, new_angle))
+    return self.current_angle
+
+bbox_center_x = bboxes[0][0] + (bboxes[0][2] // 2)
+image_center_x = color_image.shape[1] / 2
+new_angle = face_tracker.calculate_servo_angle(bbox_center_x, image_center_x)
+
+# Check that we have a valid angle
+if 0 <= new_angle <= 180:
+    face_tracker.write_to_servo(new_angle)
+```
+
+Since we have a single axis for motion, this simplifies the calculation a bit so we only really need to account for the correction to the X coordinate while ignoring the Y coordinate. We adjust for the error by some Kp value which we have tuned to 0.01 for our case.
 
 ## References
 - https://www.intelrealsense.com/sdk-2/
@@ -221,4 +249,16 @@ In addition to the audio output, the BBOX detections from the Object Classifier 
 - https://www.cs.cmu.edu/~efros/courses/LBMV07/Papers/viola-cvpr-01.pdf
 - https://www.kaggle.com/code/junhyeonkwon/using-yunet
 - https://discuss.ai.google.dev/t/how-to-make-a-conversation-with-gemini-that-supports-pictures/52472
+- https://platform.openai.com/docs/api-reference/audio
+- https://platform.openai.com/docs/guides/speech-to-text
+- https://platform.openai.com/docs/quickstart?desktop-os=windows&language-preference=python
+- https://www.youtube.com/watch?v=BMqRz3s36bY&ab_channel=ReallyEasyAI-TutorialsforEveryone
+- https://github.com/ReallyEasyAI/Working-with-the-Audio-APIs/tree/main
+- https://stackoverflow.com/questions/40704026/voice-recording-using-pyaudio
+- https://www.instructables.com/Sweep-Servo-Motor-With-Arduino-Nano/
+- https://www.quora.com/Is-it-possible-to-recognize-a-partial-face-occluded-or-non-frontal-face-by-training-Haar-Classifier
+- https://ai.google.dev/gemini-api/docs/audio?_gl=1*yl59cb*_up*MQ..&gclid=CjwKCAiAmfq6BhAsEiwAX1jsZ0pijycy7uQXAYtBiWm_CS0-SJHGn6CynoKkWXzQRwCfrn1JO_HbJRoCefsQAvD_BwE&lang=python
+- https://ai.google.dev/gemini-api/docs/long-context?_gl=1*1fngx5o*_up*MQ..&gclid=CjwKCAiAmfq6BhAsEiwAX1jsZ0pijycy7uQXAYtBiWm_CS0-SJHGn6CynoKkWXzQRwCfrn1JO_HbJRoCefsQAvD_BwE
+- https://ai.google.dev/gemini-api/docs/structured-output?_gl=1*1fngx5o*_up*MQ..&gclid=CjwKCAiAmfq6BhAsEiwAX1jsZ0pijycy7uQXAYtBiWm_CS0-SJHGn6CynoKkWXzQRwCfrn1JO_HbJRoCefsQAvD_BwE&lang=python
+- https://ai.google.dev/gemini-api/docs/vision?_gl=1*1eums12*_up*MQ..&gclid=CjwKCAiAmfq6BhAsEiwAX1jsZ0pijycy7uQXAYtBiWm_CS0-SJHGn6CynoKkWXzQRwCfrn1JO_HbJRoCefsQAvD_BwE&lang=python
 - 
