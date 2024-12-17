@@ -62,7 +62,7 @@ Luckily, OpenCV also has a pretrained YuNet model readily available for use, res
 
 ## Using [Gemini](https://ai.google.dev/gemini-api/docs/quickstart?_gl=1*17d54za*_up*MQ..&gclid=CjwKCAiAmfq6BhAsEiwAX1jsZ0pijycy7uQXAYtBiWm_CS0-SJHGn6CynoKkWXzQRwCfrn1JO_HbJRoCefsQAvD_BwE&lang=python) for Facial Recognition and Temporal Tracking
 
-In the competitive space of AI and Large Language Models (LLMs), there are many different competitors fighting for marketshare. Some of the biggest names in the space at this moment are OpenAI's ChatGPT, Anthropic's Claude, Meta's Llama, and Google's Gemini. Of these models, I've elected to utilize Google's Gemini API with both the Flash (free and light weight) and Pro (paid, larger, more advanced) models from their Gemini 1.5 lineup. One of the primary benefits of Gemini is it's 2M token context window that allows for long-context conversational chats, something that this application should benefit from. As an AI desk assistant, we don't need to remember ALL of the chat history, but if we are tokenizing image frames for input into the model, we will want to keep track of users and the context of their surroundings and interactions. Long-Context should enable us to have longer chat sessions without losing memory because each image is scaled to fit within Gemini's resolution limits (minimum of 768 pixels, maximum of 3072) and capped at 258 tokens.
+In the competitive space of AI and Large Language Models (LLMs), there are many different competitors fighting for marketshare. Some of the biggest names in the space at this moment are OpenAI's ChatGPT, Anthropic's Claude, Meta's Llama, and Google's Gemini. Of these models, I've elected to utilize Google's Gemini API with both the Flash (free and light weight) and Pro (paid, larger, more advanced) models from their Gemini 1.5 lineup. One of the primary benefits of Gemini is it's 2M token context window for Pro (1M for Flash) that allows for long-context conversational chats, something that this application should benefit from. As an AI desk assistant, we don't need to remember ALL of the chat history, but if we are tokenizing image frames for input into the model, we will want to keep track of users and the context of their surroundings and interactions. Long-Context should enable us to have longer chat sessions without losing memory because each image is scaled to fit within Gemini's resolution limits (minimum of 768 pixels, maximum of 3072) and capped at 258 tokens.
 
 The Gemini API is very well documented and their flash and pro models are some of the only models to offer multi-modal capabilities that span a significant number of modalities (ie. text, images, videos, audio). My time at Google allowed me to learn more about the API and its limitations and use cases. By using the Gemini API, I don't need to worry about quanitizing any largescale models to fit within limited computational resources. By calling the API directly, I can leverage Google's datacenters and compute in order to process queries and produce tokens faster than I could locally on a laptop or raspberry pi.
 
@@ -140,6 +140,75 @@ By telling Gemini that we also want a bounding box for the answer of each entity
 ![Gemini Bounding Box Output](./examples/ObjectDetection_Gemini.jpg)
 
 The detection and predictions are not perfect or consistent, but can likely be dialed in with tuning the temperature value for the model responses, but this is out of scope for the timeframe of this project.
+
+## Developing A Query Pipeline
+
+We've now covered how we can use various methods in OpenCV to detect non-frontal faces, use Gemini to keep contextual awareness of identities while also detecting objects, and now we need a way to actually interact with the Robot / Assistant. 
+
+### Developing our input methods (Speech-to-Text)
+
+There are a multitude of different ways we can approach input. We could use a textbox for inputting questions and prompts, but this takes some of the magic away of actually speaking with someone. That is why, I've elected to use Speech as our input. Using speech allows us to use more natural language to converse with the assistant which is what LLMs thrive on. Additionally, it opens up the door in the future to work with multiple languages as support is added to Gemini and OpenAI models, or to even train our own Speech-To-Text models for various multi-lingual chat scenarios. However, for now we will focus on using English to interact with the robot.
+
+There presents a problem, however, of how we actually want to signify the start of the User prompting the assisstant. We could use speech recognition to determine key word phrases similar to "Hey Siri", "Hey Google", "Hey Alexa", but that does not facilitate back and forth conversations very well, and also adds significantly more computational complexity and overhead. Instead, I opted to simply signify asking the assistant something by pressing 'r' as a record button. Similar to someone paging their assistant in an actual office space. When 'r' is released, the recording stops and is saved locally. We can accomplish all of this quite fast using PyAudio library.
+
+Test Output for Audio Prompt Collection:
+```
+Press 'r' to start recording & release to stop.
+Recording Started...
+Recording Stopped.
+
+Audio Recording Complete.
+```
+
+The recorded audio prompt is then passed through a Transcription Agent whose sole purpose is to transcribe Audio messages into text. This agent utilizes the Gemini API in order to take an audio file as input (WAV file in our case) and outputs the transcription text as output saved into a "prompt" variable.
+
+```
+Audio saved to C:\Users\mucke\Pitt\Fall_2024\junior_design\JuniorDesign_FinalProject\prompt.wav
+Transcribed Text Prompt: Write me a small poem about the Legend of Zelda.
+```
+
+## Generating Outputs for the User (Text-To-Speech)
+
+The prompt generated from the transcribed audio recording is then passed into our Gemini Chat Assistant Agent which actually answers our questions based on the relevant context and any input images also provided (from earlier sections). This generates our final output.
+
+```
+Generating Gemini Response...
+Response:
+Hyrule's fields, a verdant sight,
+Princess held, in shadows' might.
+Links's sword, a shining gleam,
+Against the darkness, a hero's dream.
+
+Ganon's rage, a wicked fire,
+Triforce sought, a dark desire.
+Through dungeons deep, and trials dire,
+Zelda's hope, a burning pyre.
+```
+
+Now, we create an additional Agent that handles Text-to-Speech. Our Agent uses OpenAI's text-to-speech models with the 'Onyx' voice to then read the generated output back out to the users through the speakers.
+
+```
+Converting Response to Speech with OpenAI model...
+Playing Audio...
+Audio playback complete.
+Audio Finished.
+```
+
+While you cannot hear it in this README, Gemini's response was read out by ChatGPT's TTS1 model.
+
+## Creating Our Agent Graph
+
+The Diagram demonstrates our final set of Agents. their responsibilities, and how they flow and interact with each other.
+
+![Example Agent Diagram](./examples/JD_FinalProject_AgentDiagram.jpg)
+
+We start with our scene or environment that consists of the user (and any other companions) and other various objects that may be in the scene. When the user prompts the system with their voice, it triggers the Cameras to also capture the current scene.
+
+The audio is then passed into our Speech-to-Text Agent that is powered by Gemini while the the Images are passed into our Identifier / Classifier Agent that is also powered by Gemini. Together, they append their outputs to the list of prompts that will be used by our actual Chat Assistant Agent. This agent takes our transcribed prompt, detected entities, and input images to then answer the prompt provided by the user with the added context of the scene.
+
+The output of our Assistant Agent is then passed into our Chat Voice Agent that performs Text-to-Speech using OpenAI's models and the 'onyx' voice. This is the final output heard by the user.
+
+In addition to the audio output, the BBOX detections from the Object Classifier are then passed into another Agent that identifies the relevant entity to focus on and translates the bounding box coordinates to commands for the servo to follow to focus on the user.
 
 ## References
 - https://www.intelrealsense.com/sdk-2/
