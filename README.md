@@ -1,73 +1,85 @@
 # JuniorDesign_FinalProject
 
-## Using Fusion 360 for the Design
+## Design Overview
 
-### The Base
+### The Inspiration
 
-The base of the design is meant to house a Raspberry Pi alongside the actual servo that will be rotating the head. The Raspberry Pi sits within the enclosure with added holes for both ventilation and various I/O Ports (ie. HDMI, USB, power, etc) as can be seen in the images below.
+A field of robotics that has been exploding the past few years is humanoids with semi-AGI (Artificial General Intelligence) capabilities. These humanoids are complex and have the ability to not only perceive the world around themselves, but also accomplish some form of low-level cognitive behavior as a result of LLMs (Large Language Models) and other complex ML (Machine Learning) Algorithms that allow them to learn certain tasks on a high level and then replicate these tasks with finer detail (folding laundry, cooking, cleaning, moving parts in a warehouse, etc). While I don’t have enough time or skill (yet) to build one of these complex systems in the timeframe remaining of this course, I do believe I can work on one component; a "perceptive" head. For my Junior Design Final Project, I worked on creating a Robotic Head assistant using Agentic Behavior.
 
-![Base Top View](./examples/Base_TopView.jpg)
-![Base Angled View](./examples/Base_AngleView.jpg)
-![Lid Angled View](./examples/Lid_AngleView.jpg)
+### The original HLD (High Level Design)
 
-This is what essentially acts as our base for the head to rest on while sitting atop someone's desk.
+When I first ambitiously started this project, I wanted to use 2 cameras for eyes, 2 microphones for ears, and a speaker for the mouth. The head itself was then supposed to be attached to a base via a rotating servo that would allow it to move left and right depending on where it wants to look. The head was then meant to perceive its surroundings by detecting objects and people in its FOV and answering questions about those entities using Computer Vision + an Agent Network, simulating Agentic Behavior, another growing field in AI (Artificial Intelligence).
 
-### The Head
+![Original High Level Design](./examples/JD_FinalProject_Original_HLD.jpg)
 
-The head has been designed to fit up to a RealSense d455 Depth Camera sensor. There is an extruded platform on which the sensor rests, with enough space to be able to actually plug in the camera from below still. Additionally, there is a hole exiting the back of the head for which the connecting cables can exit and plug into the Raspberry Pi housed in the base.
+### The Final HLD
 
-Additional holes are placed in the front fascia where there is supposed to be an integrated speaker, but for now, the speaker was not added, so it serves to act as some additonal ventilation for the camera sensor.
+As the complexity of this project dawned on me, multiple simplifications had to be made in order to reduce the scope of the project to fit within the given timeframe. Instead of integrating all of the sensory inputs and outputs into a single head enclosure, controlled by a raspberry pi, I elected to use my laptop as the computational hub with built in speakers and microphone arrays, and connect the cameras directly to the Laptop. Furthermore, the servo was now controlled by a little Arduino Nano communicating with my laptop via a Serial connection. As we are not currently using Robotic arms or appendages, we cannot take full advantage of the stereo vision provided by the Depth Cameras, so the biggest change is falling back to monocular vision (although there are still plans to utilize the stereo features of the camera). 
 
-Unfortunately, my CADing skills are still very poor, so the design of the head itself is very limited. However, it did result in a very cool Iron Man Prototype-esque appearance that looks awesome to some, and probably terrifying to most.
+![Final HLD](./examples/JD_FinalProject_Final_HLD.jpg)
 
-![Outside of Frontal Head Piece](./examples/Head_Front_Outside.jpg)
-![Inside of Frontal Head Piece](./examples/Head_Front_Inside.jpg)
-![Inside of Back Head Piece](./examples/Head_Back_Inside.jpg)
+This Robotic Head assistant will consist of 2 cameras for eyes, 2 microphones for ears, and 1 speaker for a mouth. The head will be attached to a motorized base allowing it to move left and right depending if it wants to follow or look for an object. The Head would be able to detect objects and answer questions about said objects or people using Computer Vision in tandem with Agentic Behavior, another growing field in AI (Artificial Intelligence).
 
-### Issues with Printing
+### The Agent Network
 
-There were multiple issues experienced while 3D Printing the design. By far the worst issue was misalignment on key dimension measurements resulting in prints that were completely unusuable, wasting filament, time, and energy. The Initial Front Head piece actually could not fit the RealSense camera sensor. I attempted to file down the platform, but there was too much material to remove. Additionally, with how the STL file was oriented prior to print, there was a severe layer-shift that warped the print and weakened the base on which the camera was supposed to rest on. This was fixed in the following iteration, although there were still some minor adjustments needed post-printing due to the dimensions being off by a few millimeters.
+Agentic Behavior essentially creates specific roles or personas for an LLM. These roles could be anything from cooks to researchers and they are meant to use specific Prompt Engineering in order to confine an LLM to a particular knowledge base or skill where they are the sole experts. These Agents can then tackle different roles and communicate with each other in a team-like fashion. An example of how this is used for this project would be a classifier agent that takes a detection from the cameras and provides in-depth information on the entity. Another example could be a chat agent that keeps track of people in frame and handles all the conversation logic. Potentially, you could have a controls Agent that handles the decisions of whether or not the head should move left or right to track a person or object, or just look around the room to perceive its surroundings which would eventually be the goal.
 
-![New Version of Frontal Head Piece](./examples/Head_Front_Inside2.jpg)
-![Printing Original Front Head Piece](./examples/front_head_print.gif)
+#### Creating Our Agent Graph
 
-## Using OpenCV for Facial Detection
+The diagram below demonstrates our final set of Agents. their responsibilities, and how they flow and interact with each other.
 
-### [Haar Cascades](https://docs.opencv.org/3.4/db/d28/tutorial_cascade_classifier.html)
+![Example Agent Diagram](./examples/JD_FinalProject_AgentDiagram.jpg)
 
-Object Detection using Haar feature-based cascade classifiers was an effective object detection method proposed by Paul Viola & Micahel Joones in their paper: ["Rapid Object Detection using a Boosted Cascade of Simple Features"](https://www.cs.cmu.edu/~efros/courses/LBMV07/Papers/viola-cvpr-01.pdf) in 2001.
+We start with our scene or environment that consists of the user (and any other companions) and other various objects that may be in the scene. When the user prompts the system with their voice, it triggers the Cameras to also capture the current scene.
 
-This machine learning approach uses a cascade function trained from numerous images with and without faces. For the feature extraction, Haar features are used which can be seen below.
+The audio is then passed into our Speech-to-Text **Prompt Agent** that is powered by Gemini while the Images are passed into our **Identifier / Classifier Agent** that is also powered by Gemini. Together, they append their outputs to the list of prompts that will be used by our actual **Chat Assistant Agent**. This agent takes our transcribed prompt, detected entities, and input images to then answer the prompt provided by the user with the added context of the scene.
 
-![Haar Features](./examples/haar_features.jpg)
+The output of our Assistant Agent is then passed into our **Chat Voice Agent** that performs Text-to-Speech using OpenAI's models and the 'onyx' voice. This is the final output heard by the user.
 
-These kernels are used to compute the features of a given frame by summing the pixels under the white and black rectangles, but even for small frames (24x24), this generates an enormous amount of features (160,000). This was solved with the integral image where the calculation for each pixel was solved with only 4 pixels, making things faster.
+In the future, in addition to the audio output, the BBOX detections from the Object Classifier can then be passed into another **Motion Agent** that identifies the relevant entity to focus on and translates the bounding box coordinates to commands for the servo to follow to focus on the user. Instead, for now, we use YuNet's Facial Detection model to generate the bounding box that is used to calculate the error from the center of the image and commands the servo to correct for this error as seen below.
 
-As the model is trained, the features that are most accurate in classifying faces are weighed highly while the rest are not. The final classifier is a weighted sum of the weak classifiers that normally cannot classify an image on their own. Overall, the paper showed great results with using just 200 features (95% accuracy), but ended up with ~6000 features in the final setup.
+```python
+def calculate_servo_angle(self, bbox_center_x, image_center_x):
+    error = bbox_center_x - image_center_x
+    adjustment = 0.01 * error
+    new_angle = self.current_angle - adjustment
+    self.current_angle = max(0, min(180, new_angle))
+    return self.current_angle
 
-However, there was still a huge inefficiency, for a given image, you apply all 6000 features to it. This is inefficient because most of the image is not going to have a face, so we waste a lot of compute searching over the entire image. Instead, we can check whether or not a window within the image is likely to be a face region, if it's not, discard it in a single shot and don't process it again.
+bbox_center_x = bboxes[0][0] + (bboxes[0][2] // 2)
+image_center_x = color_image.shape[1] / 2
+new_angle = face_tracker.calculate_servo_angle(bbox_center_x, image_center_x)
 
-This is where the **Cascade of Classifiers** comes into play, instead of applying all 6000 features on a window, the features are grouped into stages of classifiers that are applied one-by-one. If a window fails in the first stage, throw it out so we don't consider the remaining features. The paper used 6000+ features spread across 38 different stages (1, 10, 25, 25, and 50 in the first 5 stages).
+# Check that we have a valid angle
+if 0 <= new_angle <= 180:
+    face_tracker.write_to_servo(new_angle)
+```
 
-Luckily, OpenCV provides methods for training your own Cascade Classifier model or using a pretrained model. For the purposes of this project, I investigated using a pretrained model. The results of which can be found below.
+Since we have a single axis for motion, this simplifies the calculation a bit so we only really need to account for the correction to the X coordinate while ignoring the Y coordinate. We adjust for the error by some Kp value which we have tuned to 0.01 for our case.
 
-![Haar Cascade Facial Detection Model](./examples/FacialDetection_Cascades.gif)
+#### Developing our input methods (Speech-to-Text Prompt Agent)
 
-As we can see, the model has significant false positives and also fails to detect non-frontal faces. There are multiple reasons for this, the main one being that we are using the frontal face pretrained model. If we trained our own model with our own dataset, we could likely achieve better non-frontal detection performance, but that is out of the scope of this project.
+There are a multitude of different ways we can approach input. We could use a textbox for inputting questions and prompts, but this takes some of the magic away of actually speaking with someone. That is why, I've elected to use Speech as our input. Using speech allows us to use more natural language to converse with the assistant which is what LLMs thrive on. Additionally, it opens up the door in the future to work with multiple languages as support is added to Gemini and OpenAI models, or to even train our own Speech-To-Text models for various multi-lingual chat scenarios. However, for now we will focus on using English to interact with the robot.
 
-### [YuNet](https://link.springer.com/article/10.1007/s11633-023-1423-y)
+There presents a problem, however, of how we actually want to signify the start of the User prompting the assisstant. We could use speech recognition to determine key word phrases similar to "Hey Siri", "Hey Google", "Hey Alexa", but that does not facilitate back and forth conversations very well, and also adds significantly more computational complexity and overhead. Instead, I opted to simply signify asking the assistant something by pressing 'r' as a record button. Similar to someone paging their assistant in an actual office space. When 'r' is released, the recording stops and is saved locally. We can accomplish all of this quite fast using PyAudio library.
 
-This is where [YuNet](https://link.springer.com/article/10.1007/s11633-023-1423-y) comes in. The YuNet model came from Wei Wu, Hanyang Peng, and Shiqi Yu who recognized a need for fast and accurate Facial Detection models. They developed a lightweight facial detection model that was designed for mobile and embedded device applications that had limited compute resources, perfect for this project.
+Test Output for Audio Prompt Collection:
+```
+Press 'r' to start recording & release to stop.
+Recording Started...
+Recording Stopped.
 
-YuNet achieved a strong balance between accuracy and speed at the millisecond-level while significantly reducing the parameters (75,856) and computational costs, making it a fifth the size of other small face detectors.
+Audio Recording Complete.
+```
 
-The architecture uses depthwise separable convolution with Tiny Feature Pyramid Network for combining multiscale features. Their detection head is an anchor-free mechanism that simplifies predictions by reducing candidate locations, enabling faster inference and lower computation requirements. As a result, YuNet saw a mAP of 81.1% on the WIDER FACE validation hard track while maintaining a millisecond-level inference speed, outperforming other models in terms of speed and efficiency.
+The recorded audio prompt is then passed through a Transcription Agent whose sole purpose is to transcribe Audio messages into text. This agent utilizes the Gemini API in order to take an audio file as input (WAV file in our case) and outputs the transcription text as output saved into a "prompt" variable.
 
-Luckily, OpenCV also has a pretrained YuNet model readily available for use, resulting in a much more accurate and stable result that works with minor occlusions and non-frontal facial positions as seen below!
+```
+Audio saved to C:\Users\mucke\Pitt\Fall_2024\junior_design\JuniorDesign_FinalProject\prompt.wav
+Transcribed Text Prompt: Write me a small poem about the Legend of Zelda.
+```
 
-![YuNet Facial Detection Model](./examples/FacialDetection_YuNet.gif)
-
-## Using [Gemini](https://ai.google.dev/gemini-api/docs/quickstart?_gl=1*17d54za*_up*MQ..&gclid=CjwKCAiAmfq6BhAsEiwAX1jsZ0pijycy7uQXAYtBiWm_CS0-SJHGn6CynoKkWXzQRwCfrn1JO_HbJRoCefsQAvD_BwE&lang=python) for Facial Recognition and Temporal Tracking
+#### Using [Gemini](https://ai.google.dev/gemini-api/docs/quickstart?_gl=1*17d54za*_up*MQ..&gclid=CjwKCAiAmfq6BhAsEiwAX1jsZ0pijycy7uQXAYtBiWm_CS0-SJHGn6CynoKkWXzQRwCfrn1JO_HbJRoCefsQAvD_BwE&lang=python) for Facial Recognition and Temporal Tracking (Object Classification Agent)
 
 In the competitive space of AI and Large Language Models (LLMs), there are many different competitors fighting for marketshare. Some of the biggest names in the space at this moment are OpenAI's ChatGPT, Anthropic's Claude, Meta's Llama, and Google's Gemini. Of these models, I've elected to utilize Google's Gemini API with both the Flash (free and light weight) and Pro (paid, larger, more advanced) models from their Gemini 1.5 lineup. One of the primary benefits of Gemini is it's 2M token context window for Pro (1M for Flash) that allows for long-context conversational chats, something that this application should benefit from. As an AI desk assistant, we don't need to remember ALL of the chat history, but if we are tokenizing image frames for input into the model, we will want to keep track of users and the context of their surroundings and interactions. Long-Context should enable us to have longer chat sessions without losing memory because each image is scaled to fit within Gemini's resolution limits (minimum of 768 pixels, maximum of 3072) and capped at 258 tokens.
 
@@ -148,35 +160,9 @@ By telling Gemini that we also want a bounding box for the answer of each entity
 
 The detection and predictions are not perfect or consistent, but can likely be dialed in with tuning the temperature value for the model responses, but this is out of scope for the timeframe of this project.
 
-## Developing A Query Pipeline
+#### Generating Outputs for the User (Chat Agent & Text-To-Speech Voice Agent)
 
-We've now covered how we can use various methods in OpenCV to detect non-frontal faces, use Gemini to keep contextual awareness of identities while also detecting objects, and now we need a way to actually interact with the Robot / Assistant. 
-
-### Developing our input methods (Speech-to-Text)
-
-There are a multitude of different ways we can approach input. We could use a textbox for inputting questions and prompts, but this takes some of the magic away of actually speaking with someone. That is why, I've elected to use Speech as our input. Using speech allows us to use more natural language to converse with the assistant which is what LLMs thrive on. Additionally, it opens up the door in the future to work with multiple languages as support is added to Gemini and OpenAI models, or to even train our own Speech-To-Text models for various multi-lingual chat scenarios. However, for now we will focus on using English to interact with the robot.
-
-There presents a problem, however, of how we actually want to signify the start of the User prompting the assisstant. We could use speech recognition to determine key word phrases similar to "Hey Siri", "Hey Google", "Hey Alexa", but that does not facilitate back and forth conversations very well, and also adds significantly more computational complexity and overhead. Instead, I opted to simply signify asking the assistant something by pressing 'r' as a record button. Similar to someone paging their assistant in an actual office space. When 'r' is released, the recording stops and is saved locally. We can accomplish all of this quite fast using PyAudio library.
-
-Test Output for Audio Prompt Collection:
-```
-Press 'r' to start recording & release to stop.
-Recording Started...
-Recording Stopped.
-
-Audio Recording Complete.
-```
-
-The recorded audio prompt is then passed through a Transcription Agent whose sole purpose is to transcribe Audio messages into text. This agent utilizes the Gemini API in order to take an audio file as input (WAV file in our case) and outputs the transcription text as output saved into a "prompt" variable.
-
-```
-Audio saved to C:\Users\mucke\Pitt\Fall_2024\junior_design\JuniorDesign_FinalProject\prompt.wav
-Transcribed Text Prompt: Write me a small poem about the Legend of Zelda.
-```
-
-## Generating Outputs for the User (Text-To-Speech)
-
-The prompt generated from the transcribed audio recording is then passed into our Gemini Chat Assistant Agent which actually answers our questions based on the relevant context and any input images also provided (from earlier sections). This generates our final output.
+The prompt generated from the transcribed audio recording is then passed into our Gemini Chat Assistant Agent which actually answers our questions based on the relevant context and any input images also provided from the Idetification / Classification Agent. This generates our final output.
 
 ```
 Generating Gemini Response...
@@ -203,40 +189,80 @@ Audio Finished.
 
 While you cannot hear it in this README, Gemini's response was read out by ChatGPT's TTS1 model.
 
-## Creating Our Agent Graph
+### Assisting the Model with Facial Detection
 
-The Diagram demonstrates our final set of Agents. their responsibilities, and how they flow and interact with each other.
+As you may have noticed earlier, we supplement the image inputs into the Chat Agent by using bounding boxes around detected facial features in the image. This helps prime the model to have better contextual awareness of the entities it's interacting with while also aiding in keeping track of those entities. While there are many ways to go about facial detection, there are two primary methods investigated for this project: Haar Cascades and YuNet Model.
 
-![Example Agent Diagram](./examples/JD_FinalProject_AgentDiagram.jpg)
+#### Using OpenCV for Facial Detection
 
-We start with our scene or environment that consists of the user (and any other companions) and other various objects that may be in the scene. When the user prompts the system with their voice, it triggers the Cameras to also capture the current scene.
+### [Haar Cascades](https://docs.opencv.org/3.4/db/d28/tutorial_cascade_classifier.html)
 
-The audio is then passed into our Speech-to-Text Agent that is powered by Gemini while the Images are passed into our Identifier / Classifier Agent that is also powered by Gemini. Together, they append their outputs to the list of prompts that will be used by our actual Chat Assistant Agent. This agent takes our transcribed prompt, detected entities, and input images to then answer the prompt provided by the user with the added context of the scene.
+Object Detection using Haar feature-based cascade classifiers was an effective object detection method proposed by Paul Viola & Micahel Joones in their paper: ["Rapid Object Detection using a Boosted Cascade of Simple Features"](https://www.cs.cmu.edu/~efros/courses/LBMV07/Papers/viola-cvpr-01.pdf) in 2001.
 
-The output of our Assistant Agent is then passed into our Chat Voice Agent that performs Text-to-Speech using OpenAI's models and the 'onyx' voice. This is the final output heard by the user.
+This machine learning approach uses a cascade function trained from numerous images with and without faces. For the feature extraction, Haar features are used which can be seen below.
 
-### Servo Controls
+![Haar Features](./examples/haar_features.jpg)
 
-In the future, in addition to the audio output, the BBOX detections from the Object Classifier can then be passed into another Agent that identifies the relevant entity to focus on and translates the bounding box coordinates to commands for the servo to follow to focus on the user. Instead, for now, we use YuNet's Facial Detection model to generate the bounding box that is used to calculate the error from the center of the image and commands the servo to correct for this error as seen below.
+These kernels are used to compute the features of a given frame by summing the pixels under the white and black rectangles, but even for small frames (24x24), this generates an enormous amount of features (160,000). This was solved with the integral image where the calculation for each pixel was solved with only 4 pixels, making things faster.
 
-```python
-def calculate_servo_angle(self, bbox_center_x, image_center_x):
-    error = bbox_center_x - image_center_x
-    adjustment = 0.01 * error
-    new_angle = self.current_angle - adjustment
-    self.current_angle = max(0, min(180, new_angle))
-    return self.current_angle
+As the model is trained, the features that are most accurate in classifying faces are weighed highly while the rest are not. The final classifier is a weighted sum of the weak classifiers that normally cannot classify an image on their own. Overall, the paper showed great results with using just 200 features (95% accuracy), but ended up with ~6000 features in the final setup.
 
-bbox_center_x = bboxes[0][0] + (bboxes[0][2] // 2)
-image_center_x = color_image.shape[1] / 2
-new_angle = face_tracker.calculate_servo_angle(bbox_center_x, image_center_x)
+However, there was still a huge inefficiency, for a given image, you apply all 6000 features to it. This is inefficient because most of the image is not going to have a face, so we waste a lot of compute searching over the entire image. Instead, we can check whether or not a window within the image is likely to be a face region, if it's not, discard it in a single shot and don't process it again.
 
-# Check that we have a valid angle
-if 0 <= new_angle <= 180:
-    face_tracker.write_to_servo(new_angle)
-```
+This is where the **Cascade of Classifiers** comes into play, instead of applying all 6000 features on a window, the features are grouped into stages of classifiers that are applied one-by-one. If a window fails in the first stage, throw it out so we don't consider the remaining features. The paper used 6000+ features spread across 38 different stages (1, 10, 25, 25, and 50 in the first 5 stages).
 
-Since we have a single axis for motion, this simplifies the calculation a bit so we only really need to account for the correction to the X coordinate while ignoring the Y coordinate. We adjust for the error by some Kp value which we have tuned to 0.01 for our case.
+Luckily, OpenCV provides methods for training your own Cascade Classifier model or using a pretrained model. For the purposes of this project, I investigated using a pretrained model. The results of which can be found below.
+
+![Haar Cascade Facial Detection Model](./examples/FacialDetection_Cascades.gif)
+
+As we can see, the model has significant false positives and also fails to detect non-frontal faces. There are multiple reasons for this, the main one being that we are using the frontal face pretrained model. If we trained our own model with our own dataset, we could likely achieve better non-frontal detection performance, but that is out of the scope of this project.
+
+#### [YuNet](https://link.springer.com/article/10.1007/s11633-023-1423-y)
+
+This is where [YuNet](https://link.springer.com/article/10.1007/s11633-023-1423-y) comes in. The YuNet model came from Wei Wu, Hanyang Peng, and Shiqi Yu who recognized a need for fast and accurate Facial Detection models. They developed a lightweight facial detection model that was designed for mobile and embedded device applications that had limited compute resources, perfect for this project.
+
+YuNet achieved a strong balance between accuracy and speed at the millisecond-level while significantly reducing the parameters (75,856) and computational costs, making it a fifth the size of other small face detectors.
+
+The architecture uses depthwise separable convolution with Tiny Feature Pyramid Network for combining multiscale features. Their detection head is an anchor-free mechanism that simplifies predictions by reducing candidate locations, enabling faster inference and lower computation requirements. As a result, YuNet saw a mAP of 81.1% on the WIDER FACE validation hard track while maintaining a millisecond-level inference speed, outperforming other models in terms of speed and efficiency.
+
+Luckily, OpenCV also has a pretrained YuNet model readily available for use, resulting in a much more accurate and stable result that works with minor occlusions and non-frontal facial positions as seen below!
+
+![YuNet Facial Detection Model](./examples/FacialDetection_YuNet.gif)
+
+
+
+## Using Fusion 360 for the Design
+
+### The Base
+
+The base of the design is meant to house a Raspberry Pi alongside the actual servo that will be rotating the head. The Raspberry Pi sits within the enclosure with added holes for both ventilation and various I/O Ports (ie. HDMI, USB, power, etc) as can be seen in the images below.
+
+![Base Top View](./examples/Base_TopView.jpg)
+![Base Angled View](./examples/Base_AngleView.jpg)
+![Lid Angled View](./examples/Lid_AngleView.jpg)
+
+This is what essentially acts as our base for the head to rest on while sitting atop someone's desk.
+
+### The Head
+
+The head has been designed to fit up to a RealSense d455 Depth Camera sensor. There is an extruded platform on which the sensor rests, with enough space to be able to actually plug in the camera from below still. Additionally, there is a hole exiting the back of the head for which the connecting cables can exit and plug into the Raspberry Pi housed in the base.
+
+Additional holes are placed in the front fascia where there is supposed to be an integrated speaker, but for now, the speaker was not added, so it serves to act as some additonal ventilation for the camera sensor.
+
+Unfortunately, my CADing skills are still very poor, so the design of the head itself is very limited. However, it did result in a very cool Iron Man Prototype-esque appearance that looks awesome to some, and probably terrifying to most.
+
+![Outside of Frontal Head Piece](./examples/Head_Front_Outside.jpg)
+![Inside of Frontal Head Piece](./examples/Head_Front_Inside.jpg)
+![Inside of Back Head Piece](./examples/Head_Back_Inside.jpg)
+
+### Issues with Printing
+
+There were multiple issues experienced while 3D Printing the design. By far the worst issue was misalignment on key dimension measurements resulting in prints that were completely unusuable, wasting filament, time, and energy. The Initial Front Head piece actually could not fit the RealSense camera sensor. I attempted to file down the platform, but there was too much material to remove. Additionally, with how the STL file was oriented prior to print, there was a severe layer-shift that warped the print and weakened the base on which the camera was supposed to rest on. This was fixed in the following iteration, although there were still some minor adjustments needed post-printing due to the dimensions being off by a few millimeters.
+
+![New Version of Frontal Head Piece](./examples/Head_Front_Inside2.jpg)
+![Printing Original Front Head Piece](./examples/front_head_print.gif)
+
+
 
 ## References
 - https://www.intelrealsense.com/sdk-2/
