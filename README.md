@@ -20,7 +20,7 @@ As the complexity of this project dawned on me, multiple simplifications had to 
 
 This Robotic Head assistant will consist of 2 cameras for eyes, 2 microphones for ears, and 1 speaker for a mouth. The head will be attached to a motorized base allowing it to move left and right depending if it wants to follow or look for an object. The Head would be able to detect objects and answer questions about said objects or people using Computer Vision in tandem with Agentic Behavior, another growing field in AI (Artificial Intelligence).
 
-### The Agent Network
+### The Agent Network & Preliminary Design Verifications and Implementations
 
 Agentic Behavior essentially creates specific roles or personas for an LLM. These roles could be anything from cooks to researchers and they are meant to use specific Prompt Engineering in order to confine an LLM to a particular knowledge base or skill where they are the sole experts. These Agents can then tackle different roles and communicate with each other in a team-like fashion. An example of how this is used for this project would be a classifier agent that takes a detection from the cameras and provides in-depth information on the entity. Another example could be a chat agent that keeps track of people in frame and handles all the conversation logic. Potentially, you could have a controls Agent that handles the decisions of whether or not the head should move left or right to track a person or object, or just look around the room to perceive its surroundings which would eventually be the goal.
 
@@ -231,7 +231,7 @@ Luckily, OpenCV also has a pretrained YuNet model readily available for use, res
 
 
 
-## Using Fusion 360 for the Design
+## Using Fusion 360 for the Physical Design
 
 ### The Base
 
@@ -241,15 +241,15 @@ The base of the design is meant to house a Raspberry Pi alongside the actual ser
 ![Base Angled View](./examples/Base_AngleView.jpg)
 ![Lid Angled View](./examples/Lid_AngleView.jpg)
 
-This is what essentially acts as our base for the head to rest on while sitting atop someone's desk.
+This is what essentially acts as our base for the head to rest on while sitting atop someone's desk. However, it's important to note that for this project, there was not enough time to get everything working on the Raspberry Pi, so instead, the Base only houses the servo and an Ardino Nano that connects to the user's laptop for serial communications.
 
 ### The Head
 
-The head has been designed to fit up to a RealSense d455 Depth Camera sensor. There is an extruded platform on which the sensor rests, with enough space to be able to actually plug in the camera from below still. Additionally, there is a hole exiting the back of the head for which the connecting cables can exit and plug into the Raspberry Pi housed in the base.
+The head has been designed to fit up to a RealSense d455 Depth Camera sensor. There is an extruded platform on which the sensor rests, with enough space to be able to actually plug in the camera from below still. Additionally, there is a hole exiting the back of the head for which the connecting cables can exit and plug into the Raspberry Pi housed in the base or a user's laptop (like in our V1 prototype).
 
 Additional holes are placed in the front fascia where there is supposed to be an integrated speaker, but for now, the speaker was not added, so it serves to act as some additonal ventilation for the camera sensor.
 
-Unfortunately, my CADing skills are still very poor, so the design of the head itself is very limited. However, it did result in a very cool Iron Man Prototype-esque appearance that looks awesome to some, and probably terrifying to most.
+Unfortunately, my CADing skills are still very poor, so the design of the head itself is very limited. However, it did result in a very cool Iron Man Prototype-esque appearance that looks awesome to some, and probably terrifying to most. This is my first time ever really designing anything in CAD, and it's definitely my first time ever 3D Printing anything, so there were many failed prints along the way.
 
 ![Outside of Frontal Head Piece](./examples/Head_Front_Outside.jpg)
 ![Inside of Frontal Head Piece](./examples/Head_Front_Inside.jpg)
@@ -257,12 +257,28 @@ Unfortunately, my CADing skills are still very poor, so the design of the head i
 
 ### Issues with Printing
 
-There were multiple issues experienced while 3D Printing the design. By far the worst issue was misalignment on key dimension measurements resulting in prints that were completely unusuable, wasting filament, time, and energy. The Initial Front Head piece actually could not fit the RealSense camera sensor. I attempted to file down the platform, but there was too much material to remove. Additionally, with how the STL file was oriented prior to print, there was a severe layer-shift that warped the print and weakened the base on which the camera was supposed to rest on. This was fixed in the following iteration, although there were still some minor adjustments needed post-printing due to the dimensions being off by a few millimeters.
+There were multiple issues experienced while 3D Printing the initial design. By far the worst issue was misalignment on key dimension measurements resulting in prints that were completely unusuable, wasting filament, time, and energy. The Initial Front Head piece actually could not fit the RealSense camera sensor. I attempted to file down the platform, but there was too much material to remove. Additionally, with how the STL file was oriented prior to print, there was a severe layer-shift that warped the print and weakened the base on which the camera was supposed to rest on. This was fixed in the following iteration, although there were still some minor adjustments needed post-printing due to the dimensions being off by a few millimeters. In the future, I think I will definitely be much more precise with my measurements and ensure that I allow for some level or degree of wiggle-room when it comes to fitting parts that are complex in shape or just integral to the system in general. The new version of the front fascia can be seen below. There are still adjustment that need to be made, but this was sufficient for a V1 Prototype demo.
 
 ![New Version of Frontal Head Piece](./examples/Head_Front_Inside2.jpg)
 ![Printing Original Front Head Piece](./examples/front_head_print.gif)
 
+## Testing
 
+As we scaled up the system, there were many different components that needed to be tested as I was getting to understand the APIs. After creating my initial design plan, I began tackling each individual agent one-by-one to ensure that I understood the requirements of the model inputs and outputs. Looking into the *agent_ws* and *camera_ws* directories, you can find a multitude of Python scripts just experimenting and testing various features and agent setups.
+
+There were a multitude of issues that came up, but debugging was not too bad. Most issues were either formatting or syntax errors which could be traced from the error traces. Adding in try-except blocks also helped a lot to raise exceptions when trying to use various APIs or libraries.
+
+## What's Next?
+
+Overall, I aimed to create an Agentic Robotic Head that could ask as my own personal desk buddy to entertain and interact with me whenever I want. While the design is not perfect, and there are many improvements that could be made in both hardware and software, this was an invaluable learning experience to help facilitate my curiosity and desires for exploration.
+
+The first improvements to be made involvde the physical design. I want to completely redesign the Head in Fusion such that it more naturally fits the Realsense, has actual fixed screws for securing the head in place (so it doesn't look like it just wants to completely flop over), and reduce the overall size of the base so we aren't wasting resources. Additionally, I would like to explore actually integrating a microphone array and speaker system into the head to have an all-in-one enclosure. The peripherals should be controlled by the Pi while the actual puppeteering of the system would all be handled by the User's laptop.
+
+Furthermore, I have little to no experience with actual UI design or Frontend Software development, so I would love to develop a webapp to host the whole service that neatly integrates the camera stream, model outputs, and system in general. Similar to any other LLM chat UI (chatgpt, claude, gemini), but with the physical integration of the head and base. Even more ideally, the information would all be communicated over bluetooth. This should be possible with minimal overhead since all of the model computations are still happening on external servers, we would just be modifying how the host laptop communicates with the Head in a local environment. Combining front-end development with additional features like "web-searching" capabilities would be absolutely incredible. 
+
+Finally, it would be incredible to fine-tune and train my own models for the agents to maximize the actual response quality and performance. At the end of the day, I am proud of what I was able to accomplish in quite literally less than a month while also taking multiple other classes. Robots will forever be cool!
+
+![Final Prototype V1.0](./examples/prototype_v1.jpeg)
 
 ## References
 - https://www.intelrealsense.com/sdk-2/
@@ -287,4 +303,6 @@ There were multiple issues experienced while 3D Printing the design. By far the 
 - https://ai.google.dev/gemini-api/docs/long-context?_gl=1*1fngx5o*_up*MQ..&gclid=CjwKCAiAmfq6BhAsEiwAX1jsZ0pijycy7uQXAYtBiWm_CS0-SJHGn6CynoKkWXzQRwCfrn1JO_HbJRoCefsQAvD_BwE
 - https://ai.google.dev/gemini-api/docs/structured-output?_gl=1*1fngx5o*_up*MQ..&gclid=CjwKCAiAmfq6BhAsEiwAX1jsZ0pijycy7uQXAYtBiWm_CS0-SJHGn6CynoKkWXzQRwCfrn1JO_HbJRoCefsQAvD_BwE&lang=python
 - https://ai.google.dev/gemini-api/docs/vision?_gl=1*1eums12*_up*MQ..&gclid=CjwKCAiAmfq6BhAsEiwAX1jsZ0pijycy7uQXAYtBiWm_CS0-SJHGn6CynoKkWXzQRwCfrn1JO_HbJRoCefsQAvD_BwE&lang=python
-- 
+
+
+![Thank you for reading](./examples/meme.gif)

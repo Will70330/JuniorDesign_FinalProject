@@ -207,7 +207,7 @@ class FacialTracker:
 
         try:
             print("\nEstablishing Serial Connection to Arduino.")
-            self.arduino_port = "COM7"
+            self.arduino_port = "COM9"
             self.baud_rate = 9600
             self.timeout = 5.0
             
@@ -219,6 +219,7 @@ class FacialTracker:
             self.write_to_servo(self.current_angle)
         except serial.SerialException as  e:
             print(f"Error: Could not open serial port {self.arduino_port}: {e}")
+            raise e
         finally:
             self.close_port()
     
